@@ -1,7 +1,9 @@
 import express from "express";
 
-const app = express();
+import { errorHandling } from "./middlewares/error-handling";
+
+export const app = express();
 
 app.use(express.json());
 
-export { app };
+app.use(errorHandling);
