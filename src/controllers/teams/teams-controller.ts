@@ -18,7 +18,7 @@ export class TeamController {
       },
     });
 
-    return response.json({ message: "TeamsController: OK" });
+    return response.status(201).json();
   }
 
   async index(request: Request, response: Response) {
