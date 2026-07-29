@@ -69,15 +69,44 @@ export class TasksController {
       request.body,
     );
 
-    await prisma.task.update({
-      data: {
-        title,
-        description,
-        status,
-        priority,
-      },
+    const task = await prisma.task.findUnique({
       where: { id },
     });
+
+    if (!task) {
+      throw new AppError("task not found", 404);
+    }
+
+    if (
+      request.user?.role !== "admin" &&
+      task.assignedTo !== request.user?.id
+    ) {
+      throw new AppError("Unauthorized", 401);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.task.update({
+        where: { id },
+        data: {
+          title,
+          description,
+          status,
+          priority,
+        },
+      });
+
+      if (status && status !== task.status) {
+        await tx.taskHistory.create({
+          data: {
+            taskId: task.id,
+            oldStatus: task.status,
+            newStatus: status,
+            changedBy: request.user!.id,
+          },
+        });
+      }
+    });
+
     return response.status(204).json();
   }
 
@@ -96,9 +125,17 @@ export class TasksController {
       throw new AppError("Task not found", 404);
     }
 
+    if (
+      request.user?.role !== "admin" &&
+      task.assignedTo !== request.user?.id
+    ) {
+      throw new AppError("Unauthorized", 401);
+    }
+
     await prisma.task.delete({
       where: { id },
     });
-    return response.json({ message: "Tasks: Delete" });
+
+    return response.json();
   }
 }
